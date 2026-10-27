@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.20)
+
+set(PROJECT_NAME App)
+
+project(${PROJECT_NAME}
+	VERSION 1.0.0
+	LANGUAGES CXX)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+	set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+		Debug Release RelWithDebInfo MinSizeRel)
+endif()
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
+
+option(PROJECT_DIR "Directory of project folder" ".")
+
+find_package(Engine REQUIRED)
+
+add_library(${PROJECT_NAME} SHARED)
+target_sources(${PROJECT_NAME} PRIVATE plugin.cpp)
+target_link_libraries(${PROJECT_NAME} PUBLIC Engine::Engine)
+target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_DIR}/src)

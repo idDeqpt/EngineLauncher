@@ -1,5 +1,5 @@
 set(ENGINE_DIR "${CMAKE_CURRENT_LIST_DIR}/Engine" CACHE PATH "Where to clone Engine")
-set(REPO_URL   "git@github.com:/idDeqpt/Engine.git")
+set(REPO_URL   "git@github.com:idDeqpt/Engine.git")
 set(REPO_TAG   "dev")
 
 if(NOT EXISTS "${ENGINE_DIR}/CMakeLists.txt")

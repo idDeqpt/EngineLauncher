@@ -15,7 +15,7 @@ endif()
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 
-option(PROJECT_DIR "Directory of project folder" ".")
+set(PROJECT_DIR "." CACHE PATH "Directory of project folder")
 
 find_package(Engine REQUIRED)
 

@@ -1,10 +1,24 @@
+#include <filesystem>
 #include <iostream>
+#include <utility>
+#include <cstdlib>
 
-
-void exec(std::string command)
+template <typename... Args>
+void exec(Args&&... args)
 {
-	std::cout << "> " << command << std::endl;
-	system(command.c_str());
+	std::string cmd;
+
+	auto append = [&cmd](const auto& arg) {
+		if (!cmd.empty())
+			cmd.push_back(' ');
+		cmd += arg;
+	};
+
+	(append(std::forward<Args>(args)), ...);
+
+	std::cout << "> " << cmd << std::endl;
+
+	(void)std::system(cmd.c_str());
 }
 
 
@@ -17,30 +31,40 @@ int main(int argc, char* argv[])
 
 	if (std::string(argv[1]) == "build")
 	{
-		std::string proj_path = argv[2];
-		std::cout << proj_path << std::endl;
-		
+		std::filesystem::path proj_path = std::filesystem::canonical(argv[2]);
+		std::filesystem::path root = std::filesystem::canonical(argv[0]).parent_path();
+		std::filesystem::path work = root / "work";
+		std::filesystem::path out  = root / "runtime";
+		std::string cfg = "Release";
+		std::string engine_install = (work/"Engine/install").string();
+		std::string DCMAKE_BUILD_TYPE = "-DCMAKE_BUILD_TYPE=" + cfg;
+		std::string DCMAKE_PREFIX_PATH = "-DCMAKE_PREFIX_PATH=" + engine_install;
+		std::string DCMAKE_INSTALL_PREFIX = "-DCMAKE_INSTALL_PREFIX=" + engine_install;
+
+		std::cout << "proj_path: " << proj_path.string() << std::endl;
+		std::cout << "root: " << root.string() << std::endl;
+		std::cout << "work: " << work.string() << std::endl;
+		std::cout << "out: " << out.string() << std::endl;
+		std::cout << std::endl;
+
 		//Engine
-		exec("cmake -P ./export/download_engine.cmake");
-		exec("cmake -S ./export/Engine -B ./export/Engine/build -DCMAKE_INSTALL_PREFIX=./export/Engine/install");
-		exec("cmake --build ./export/Engine/build");
-		exec("cmake --install ./export/Engine/build");
+		exec("cmake", "-DENGINE_DIR=" + (work/"Engine").string(), "-P", (root/"export/download_engine.cmake").string());
+		exec("cmake", "-S", (work/"Engine").string(), "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE);
+		exec("cmake", "--build", (work/"Engine/build").string(), "--config", cfg);
+		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg);
 
 		//App
-		exec("cmake -S ./export/App -B ./export/App/build -DCMAKE_INSTALL_PREFIX=./export/Engine/install");
-		exec("cmake --build ./export/App/build");
+		exec("cmake", "-S", (root/"export/App").string(), "-B", (work/"App").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE);
+		exec("cmake", "--build",   (work/"App").string(), "--config", cfg);
+		exec("cmake", "--install", (work/"App").string(), "--config", cfg, "--prefix", out.string());
 
 		//Project
-		exec("cmake -S ./export/Project -B ./export/Project/build -DCMAKE_INSTALL_PREFIX=./export/Engine/install -DPROJECT_DIR=\"" + proj_path + "\"");
-		exec("cmake --build ./export/Project/build");
+		exec("cmake", "-S", (root/"export/Project").string(), "-B", (work/"Project").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE, "-DPROJECT_DIR=" + proj_path.string());
+		exec("cmake", "--build",   (work/"Project").string(), "--config", cfg);
+		exec("cmake", "--install", (work/"Project").string(), "--config", cfg, "--prefix", out.string());
 
-		//move files
-		exec("mkdir dist");
-		exec("mkdir dist/lib");
-		exec("mv ./export/App/build/Release/AppName ./dist/AppName");
-		exec("mv ./export/Engine/build/Release/libEngine.so ./dist/lib/libEngine.so");
-		exec("mv ./export/Project/build/Release/libApp.so ./dist/lib/libApp.so");
-		exec("cp -r \"" + proj_path + "/res\" ./dist/res");
+		//Runtime
+		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg, "--prefix", out.string(), "--component", "runtime");
 	}
 
 	return 0;

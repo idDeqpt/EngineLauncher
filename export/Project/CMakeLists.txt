@@ -23,3 +23,10 @@ add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE plugin.cpp)
 target_link_libraries(${PROJECT_NAME} PUBLIC Engine::Engine)
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_DIR}/src)
+
+install(TARGETS ${PROJECT_NAME}
+		LIBRARY DESTINATION lib
+		RUNTIME DESTINATION lib)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+		INSTALL_RPATH "$ORIGIN")
+install(DIRECTORY "${PROJECT_DIR}/res" DESTINATION .)

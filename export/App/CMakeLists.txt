@@ -20,3 +20,9 @@ find_package(Engine REQUIRED)
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE Engine::Engine)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+install(TARGETS ${PROJECT_NAME}
+		RUNTIME DESTINATION .
+		BUNDLE  DESTINATION .)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+		INSTALL_RPATH "$ORIGIN/lib")

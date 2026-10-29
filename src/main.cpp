@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 
 		//Engine
-		exec("cmake", "-DENGINE_DIR=" + (work/"Engine").string(), "-P", (root/"export/Engine/fetch.cmake").string());
+		exec("cmake", "-DENGINE_SOURCE_DIR=" + (work/"Engine").string(), "-P", (root/"export/Engine/fetch.cmake").string());
 		exec("cmake", "-S", (work/"Engine").string(), "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE);
 		exec("cmake", "--build", (work/"Engine/build").string(), "--config", cfg);
 		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg);

@@ -1,6 +1,24 @@
+#include <Engine/Core/PluginHost.hpp>
+#include <Engine/Core/Plugin.hpp>
+#include <memory>
+
 #include <Root.hpp>
 
-extern "C" eng::core::Node* engine_create_root()
+class AppPlugin : public eng::core::Plugin
 {
-	return new Root();
+public:
+	void onSetup(const eng::core::PluginHost& host) override
+	{
+		host.root.addChild(std::make_unique<Root>(), "game");
+	}
+};
+
+extern "C" eng::core::Plugin* engine_plugin_create()
+{
+	return new AppPlugin();
+}
+
+extern "C" void engine_plugin_destroy(eng::core::Plugin* plugin)
+{
+	delete plugin;
 }

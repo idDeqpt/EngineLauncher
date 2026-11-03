@@ -3,6 +3,9 @@
 #include <utility>
 #include <cstdlib>
 
+#include <CLI/Options.hpp>
+#include <CLI/Tools.hpp>
+
 template <typename... Args>
 void exec(Args&&... args)
 {
@@ -22,19 +25,74 @@ void exec(Args&&... args)
 }
 
 
-int main(int argc, char* argv[])
+class Command
 {
+public:
+	Command(const std::string& name, const std::vector<cli::Option>& options):
+		m_name(name),
+		m_options(options) {}
+
+	virtual ~Command() = default;
+
+	cli::Command toCLI() const
+	{
+		return cli::Command{m_name, m_options};
+	}
+
+	const std::string& getName() const
+	{
+		return m_name;
+	}
+
+protected:
+	std::string m_name;
+	std::vector<cli::Option> m_options;
+};
+
+class BuildCommand : public Command
+{
+public:
+	BuildCommand():
+		Command("build", {
+			{cli::Option::Name('p', "project"), cli::Option::Type::ONE_ARGUMENT},
+			{cli::Option::Name('o', "output"),  cli::Option::Type::ONE_ARGUMENT}
+		}) {}
+	
+	cli::Option::Name project = m_options[0].name;
+	cli::Option::Name output = m_options[1].name;
+};
+
+
+int main(int argc, const char* argv[])
+{
+	BuildCommand build_command;
+	std::vector<cli::Command> commands = {build_command.toCLI()};
+
+	cli::Options opt;
+	bool res = opt.parse(cli::tools::extractArguments(argv, argc), commands);
+	if (!res)
+	{
+		std::cout << "bad arguments" << std::endl;
+		return 1;
+	}
+
 	for (unsigned int i = 0; i < argc; i++)
 		std::cout << argv[i] << std::endl;
 
-	if (argc < 3) return 1;
-
-	if (std::string(argv[1]) == "build")
+	if (opt.getCalledCommandName() == "build")
 	{
-		std::filesystem::path proj_path = std::filesystem::canonical(argv[2]);
+		auto project_arg = opt.getArgument(build_command.project);
+		auto output_arg = opt.getArgument(build_command.output);
+		if (!project_arg)
+		{
+			std::cout << "No project path" << std::endl;
+			return 1;
+		}
+
+		std::filesystem::path proj_path = std::filesystem::canonical(*project_arg);
 		std::filesystem::path root = std::filesystem::canonical(argv[0]).parent_path();
 		std::filesystem::path work = root / "work";
-		std::filesystem::path out  = root / "runtime";
+		std::filesystem::path out  = output_arg ? std::filesystem::weakly_canonical(*output_arg) : (root/("runtime"));
 		std::string cfg = "Release";
 		std::string engine_install = (work/"Engine/install").string();
 		std::string DCMAKE_BUILD_TYPE = "-DCMAKE_BUILD_TYPE=" + cfg;

@@ -55,11 +55,13 @@ public:
 	BuildCommand():
 		Command("build", {
 			{cli::Option::Name('p', "project"), cli::Option::Type::ONE_ARGUMENT},
-			{cli::Option::Name('o', "output"),  cli::Option::Type::ONE_ARGUMENT}
+			{cli::Option::Name('o', "output"),  cli::Option::Type::ONE_ARGUMENT},
+			{cli::Option::Name('c', "config"),  cli::Option::Type::ONE_ARGUMENT}
 		}) {}
 	
 	cli::Option::Name project = m_options[0].name;
-	cli::Option::Name output = m_options[1].name;
+	cli::Option::Name output  = m_options[1].name;
+	cli::Option::Name config  = m_options[2].name;
 };
 
 
@@ -82,7 +84,9 @@ int main(int argc, const char* argv[])
 	if (opt.getCalledCommandName() == "build")
 	{
 		auto project_arg = opt.getArgument(build_command.project);
-		auto output_arg = opt.getArgument(build_command.output);
+		auto output_arg  = opt.getArgument(build_command.output);
+		auto config_arg  = opt.getArgument(build_command.config);
+
 		if (!project_arg)
 		{
 			std::cout << "No project path" << std::endl;
@@ -93,7 +97,7 @@ int main(int argc, const char* argv[])
 		std::filesystem::path root = std::filesystem::canonical(argv[0]).parent_path();
 		std::filesystem::path work = root / "work";
 		std::filesystem::path out  = output_arg ? std::filesystem::weakly_canonical(*output_arg) : (root/("runtime"));
-		std::string cfg = "Release";
+		std::string cfg = config_arg ? *config_arg : "Release";
 		std::string engine_install = (work/"Engine/install").string();
 		std::string DCMAKE_BUILD_TYPE = "-DCMAKE_BUILD_TYPE=" + cfg;
 		std::string DCMAKE_PREFIX_PATH = "-DCMAKE_PREFIX_PATH=" + engine_install;
@@ -103,6 +107,7 @@ int main(int argc, const char* argv[])
 		std::cout << "root: " << root.string() << std::endl;
 		std::cout << "work: " << work.string() << std::endl;
 		std::cout << "out: " << out.string() << std::endl;
+		std::cout << "config: " << cfg << std::endl;
 		std::cout << std::endl;
 
 		//Engine

@@ -6,6 +6,12 @@
 #include <CLI/Options.hpp>
 #include <CLI/Tools.hpp>
 
+#ifdef _WIN32
+	static const std::string DEFAULT_PLATFORM = "Windows";
+#else
+	static const std::string DEFAULT_PLATFORM = "Linux";
+#endif
+
 template <typename... Args>
 void exec(Args&&... args)
 {
@@ -56,12 +62,14 @@ public:
 		Command("build", {
 			{cli::Option::Name('p', "project"), cli::Option::Type::ONE_ARGUMENT},
 			{cli::Option::Name('o', "output"),  cli::Option::Type::ONE_ARGUMENT},
-			{cli::Option::Name('c', "config"),  cli::Option::Type::ONE_ARGUMENT}
+			{cli::Option::Name('c', "config"),  cli::Option::Type::ONE_ARGUMENT},
+			{cli::Option::Name("platform"),     cli::Option::Type::ONE_ARGUMENT}
 		}) {}
 	
-	cli::Option::Name project = m_options[0].name;
-	cli::Option::Name output  = m_options[1].name;
-	cli::Option::Name config  = m_options[2].name;
+	cli::Option::Name project  = m_options[0].name;
+	cli::Option::Name output   = m_options[1].name;
+	cli::Option::Name config   = m_options[2].name;
+	cli::Option::Name platform = m_options[3].name;
 };
 
 
@@ -78,14 +86,12 @@ int main(int argc, const char* argv[])
 		return 1;
 	}
 
-	for (unsigned int i = 0; i < argc; i++)
-		std::cout << argv[i] << std::endl;
-
 	if (opt.getCalledCommandName() == "build")
 	{
-		auto project_arg = opt.getArgument(build_command.project);
-		auto output_arg  = opt.getArgument(build_command.output);
-		auto config_arg  = opt.getArgument(build_command.config);
+		auto project_arg  = opt.getArgument(build_command.project);
+		auto output_arg   = opt.getArgument(build_command.output);
+		auto config_arg   = opt.getArgument(build_command.config);
+		auto platform_arg = opt.getArgument(build_command.platform);
 
 		if (!project_arg)
 		{
@@ -93,10 +99,13 @@ int main(int argc, const char* argv[])
 			return 1;
 		}
 
+		std::string platform = platform_arg ? *platform_arg : DEFAULT_PLATFORM;
 		std::filesystem::path proj_path = std::filesystem::canonical(*project_arg);
 		std::filesystem::path root = std::filesystem::canonical(argv[0]).parent_path();
 		std::filesystem::path work = root / "work";
+		std::filesystem::path exportd = root / "export";
 		std::filesystem::path out  = output_arg ? std::filesystem::weakly_canonical(*output_arg) : (root/("runtime"));
+		std::filesystem::path platform_export = exportd / platform;
 		std::string cfg = config_arg ? *config_arg : "Release";
 		std::string engine_install = (work/"Engine/install").string();
 		std::string DCMAKE_BUILD_TYPE = "-DCMAKE_BUILD_TYPE=" + cfg;
@@ -108,23 +117,30 @@ int main(int argc, const char* argv[])
 		std::cout << "work: " << work.string() << std::endl;
 		std::cout << "out: " << out.string() << std::endl;
 		std::cout << "config: " << cfg << std::endl;
+		std::cout << "platform: " << platform << std::endl;
 		std::cout << std::endl;
 
+		if (!std::filesystem::exists(platform_export))
+		{
+			std::cout << "Wrong platform" << std::endl;
+			return 1;
+		}
+
 		//Engine
-		exec("cmake", "-DENGINE_SOURCE_DIR=" + (work/"Engine").string(), "-P", (root/"export/Engine/fetch.cmake").string());
-		exec("cmake", "-S", (work/"Engine").string(), "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE);
-		exec("cmake", "--build", (work/"Engine/build").string(), "--config", cfg);
+		exec("cmake", "-DENGINE_SOURCE_DIR=" + (work/"Engine").string(), "-P", (platform_export/"Engine/fetch.cmake").string());
+		exec("cmake", "-S",        (work/"Engine").string(),       "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE);
+		exec("cmake", "--build",   (work/"Engine/build").string(), "--config", cfg);
 		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg);
 
 		//App
-		exec("cmake", "-S", (root/"export/App").string(), "-B", (work/"App").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE);
-		exec("cmake", "--build",   (work/"App").string(), "--config", cfg);
-		exec("cmake", "--install", (work/"App").string(), "--config", cfg, "--prefix", out.string());
+		exec("cmake", "-S", (platform_export/"App").string(), "-B", (work/"App").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE);
+		exec("cmake", "--build",       (work/"App").string(), "--config", cfg);
+		exec("cmake", "--install",     (work/"App").string(), "--config", cfg, "--prefix", out.string());
 
 		//Project
-		exec("cmake", "-S", (root/"export/Project").string(), "-B", (work/"Project").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE, "-DPROJECT_DIR=" + proj_path.string());
-		exec("cmake", "--build",   (work/"Project").string(), "--config", cfg);
-		exec("cmake", "--install", (work/"Project").string(), "--config", cfg, "--prefix", out.string());
+		exec("cmake", "-S", (platform_export/"Project").string(), "-B", (work/"Project").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE, "-DPROJECT_DIR=" + proj_path.string());
+		exec("cmake", "--build",       (work/"Project").string(), "--config", cfg);
+		exec("cmake", "--install",     (work/"Project").string(), "--config", cfg, "--prefix", out.string());
 
 		//Runtime
 		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg, "--prefix", out.string(), "--component", "runtime");

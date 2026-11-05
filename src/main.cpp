@@ -3,6 +3,10 @@
 #include <utility>
 #include <cstdlib>
 
+#ifdef __linux__
+	#include <sys/wait.h>
+#endif
+
 #include <CLI/Options.hpp>
 #include <CLI/Tools.hpp>
 
@@ -27,7 +31,19 @@ int exec(Args&&... args)
 
 	std::cout << "> " << cmd << std::endl;
 
-	(void)std::system(cmd.c_str());
+	int status = std::system(cmd.c_str());
+
+	#ifdef __linux__
+		if (status == -1)
+			return -1;
+
+		if (WIFEXITED(status))
+			return WEXITSTATUS(status);
+
+		return -1;
+	#endif
+
+	return status;
 }
 
 
@@ -114,23 +130,23 @@ public:
 		}
 
 		//Engine
-		exec("cmake", "-DENGINE_SOURCE_DIR=" + (work/"Engine").string(), "-P", (platform_export/"Engine/fetch.cmake").string());
-		exec("cmake", "-S",        (work/"Engine").string(),       "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE);
-		exec("cmake", "--build",   (work/"Engine/build").string(), "--config", cfg);
-		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg);
+		if (0 != exec("cmake", "-DENGINE_SOURCE_DIR=" + (work/"Engine").string(), "-P", (platform_export/"Engine/fetch.cmake").string())) return 2;
+		if (0 != exec("cmake", "-S",        (work/"Engine").string(),       "-B", (work/"Engine/build").string(), DCMAKE_INSTALL_PREFIX, DCMAKE_BUILD_TYPE)) return 2;
+		if (0 != exec("cmake", "--build",   (work/"Engine/build").string(), "--config", cfg)) return 2;
+		if (0 != exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg)) return 2;
 
 		//App
-		exec("cmake", "-S", (platform_export/"App").string(), "-B", (work/"App").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE);
-		exec("cmake", "--build",       (work/"App").string(), "--config", cfg);
-		exec("cmake", "--install",     (work/"App").string(), "--config", cfg, "--prefix", out.string());
+		if (0 != exec("cmake", "-S", (platform_export/"App").string(), "-B", (work/"App").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE)) return 2;
+		if (0 != exec("cmake", "--build",       (work/"App").string(), "--config", cfg)) return 2;
+		if (0 != exec("cmake", "--install",     (work/"App").string(), "--config", cfg, "--prefix", out.string())) return 2;
 
 		//Project
-		exec("cmake", "-S", (platform_export/"Project").string(), "-B", (work/"Project").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE, "-DPROJECT_DIR=" + proj_path.string());
-		exec("cmake", "--build",       (work/"Project").string(), "--config", cfg);
-		exec("cmake", "--install",     (work/"Project").string(), "--config", cfg, "--prefix", out.string());
+		if (0 != exec("cmake", "-S", (platform_export/"Project").string(), "-B", (work/"Project").string(), DCMAKE_PREFIX_PATH, DCMAKE_BUILD_TYPE, "-DPROJECT_DIR=" + proj_path.string())) return 2;
+		if (0 != exec("cmake", "--build",       (work/"Project").string(), "--config", cfg)) return 2;
+		if (0 != exec("cmake", "--install",     (work/"Project").string(), "--config", cfg, "--prefix", out.string())) return 2;
 
 		//Runtime
-		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg, "--prefix", out.string(), "--component", "runtime");
+		if (0 != exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg, "--prefix", out.string(), "--component", "runtime")) return 2;
 
 		return 0;
 	}

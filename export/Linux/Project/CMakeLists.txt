@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(PROJECT_DIR "." CACHE PATH "Directory of project folder")
+set(ROOT_CLASS "Root" CACHE STRING "Root class name")
+
 set(PROJECT_NAME App)
 
 project(${PROJECT_NAME}
@@ -15,14 +18,21 @@ endif()
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 
-set(PROJECT_DIR "." CACHE PATH "Directory of project folder")
-
 find_package(Engine REQUIRED)
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/plugin_config.hpp.in
+    ${CMAKE_CURRENT_BINARY_DIR}/generated/plugin_config.hpp
+    @ONLY
+)
 
 add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE plugin.cpp)
 target_link_libraries(${PROJECT_NAME} PUBLIC Engine::Engine)
-target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_DIR}/src)
+target_include_directories(${PROJECT_NAME} PRIVATE
+	${CMAKE_CURRENT_BINARY_DIR}/generated
+	${PROJECT_DIR}/src
+)
 
 install(TARGETS ${PROJECT_NAME}
 		LIBRARY DESTINATION lib

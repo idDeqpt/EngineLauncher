@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(PROJECT_NAME AppName)
+set(APP_NAME "AppName" CACHE STRING "Name of app")
+
+set(PROJECT_NAME ${APP_NAME})
 
 project(${PROJECT_NAME}
 	VERSION 1.0.0

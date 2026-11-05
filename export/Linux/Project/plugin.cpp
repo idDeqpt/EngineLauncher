@@ -2,14 +2,14 @@
 #include <Engine/Core/Plugin.hpp>
 #include <memory>
 
-#include <Root.hpp>
+#include <plugin_config.hpp>
 
 class AppPlugin : public eng::core::Plugin
 {
 public:
 	void onSetup(const eng::core::PluginHost& host) override
 	{
-		host.root.addChild(std::make_unique<Root>(), "game");
+		host.root.addChild(std::make_unique<PLUGIN_ROOT_CLASS>(), "game");
 	}
 };
 

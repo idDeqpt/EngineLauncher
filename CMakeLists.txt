@@ -19,17 +19,26 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/$<CONFIG>)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH})
 
 include(FetchContent)
+
 FetchContent_Declare(
     CLI
     GIT_REPOSITORY "https://github.com/idDeqpt/CommandLineInterface.git"
     GIT_TAG 494ee925bbb685bef1d92beb8a97c5797a7b048d
 )
+FetchContent_Declare(
+    JSTypes
+    GIT_REPOSITORY "https://github.com/idDeqpt/JSTypes.git"
+    GIT_TAG 8974efaaeab915d089ab41e2038100e9bd10fa87
+)
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library" FORCE)
 FetchContent_MakeAvailable(CLI)
+FetchContent_MakeAvailable(JSTypes)
 
 add_executable(${PROJECT_NAME} src/main.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE CLI)
+target_link_libraries(${PROJECT_NAME} PRIVATE JSTypes)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 

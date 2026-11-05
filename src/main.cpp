@@ -13,7 +13,7 @@
 #endif
 
 template <typename... Args>
-void exec(Args&&... args)
+int exec(Args&&... args)
 {
 	std::string cmd;
 
@@ -39,6 +39,8 @@ public:
 		m_options(options) {}
 
 	virtual ~Command() = default;
+
+	virtual int callback(const cli::Options& opt, const std::string& self_path) = 0;
 
 	cli::Command toCLI() const
 	{
@@ -70,28 +72,13 @@ public:
 	cli::Option::Name output   = m_options[1].name;
 	cli::Option::Name config   = m_options[2].name;
 	cli::Option::Name platform = m_options[3].name;
-};
 
-
-int main(int argc, const char* argv[])
-{
-	BuildCommand build_command;
-	std::vector<cli::Command> commands = {build_command.toCLI()};
-
-	cli::Options opt;
-	bool res = opt.parse(cli::tools::extractArguments(argv, argc), commands);
-	if (!res)
+	int callback(const cli::Options& opt, const std::string& self_path) override
 	{
-		std::cout << "bad arguments" << std::endl;
-		return 1;
-	}
-
-	if (opt.getCalledCommandName() == "build")
-	{
-		auto project_arg  = opt.getArgument(build_command.project);
-		auto output_arg   = opt.getArgument(build_command.output);
-		auto config_arg   = opt.getArgument(build_command.config);
-		auto platform_arg = opt.getArgument(build_command.platform);
+		auto project_arg  = opt.getArgument(this->project);
+		auto output_arg   = opt.getArgument(this->output);
+		auto config_arg   = opt.getArgument(this->config);
+		auto platform_arg = opt.getArgument(this->platform);
 
 		if (!project_arg)
 		{
@@ -101,7 +88,7 @@ int main(int argc, const char* argv[])
 
 		std::string platform = platform_arg ? *platform_arg : DEFAULT_PLATFORM;
 		std::filesystem::path proj_path = std::filesystem::canonical(*project_arg);
-		std::filesystem::path root = std::filesystem::canonical(argv[0]).parent_path();
+		std::filesystem::path root = std::filesystem::canonical(self_path).parent_path();
 		std::filesystem::path work = root / "work";
 		std::filesystem::path exportd = root / "export";
 		std::filesystem::path out  = output_arg ? std::filesystem::weakly_canonical(*output_arg) : (root/("runtime"));
@@ -144,7 +131,27 @@ int main(int argc, const char* argv[])
 
 		//Runtime
 		exec("cmake", "--install", (work/"Engine/build").string(), "--config", cfg, "--prefix", out.string(), "--component", "runtime");
+
+		return 0;
 	}
+};
+
+
+int main(int argc, const char* argv[])
+{
+	BuildCommand build_command;
+	std::vector<cli::Command> commands = {build_command.toCLI()};
+
+	cli::Options opt;
+	bool res = opt.parse(cli::tools::extractArguments(argv, argc), commands);
+	if (!res)
+	{
+		std::cout << "bad arguments" << std::endl;
+		return 1;
+	}
+
+	if (opt.getCalledCommandName() == "build")
+		return build_command.callback(opt, std::string(argv[0]));
 
 	return 0;
 }
